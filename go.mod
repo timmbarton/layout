@@ -2,6 +2,14 @@ module github.com/timmbarton/layout
 
 go 1.23.3
 
+replace (
+	github.com/timmbarton/layout/components/grpcserver => ./components/grpcserver
+	github.com/timmbarton/layout/components/httpserver => ./components/httpserver
+	github.com/timmbarton/layout/components/postgresconn => ./components/postgresconn
+	github.com/timmbarton/layout/components/redisconn => ./components/redisconn
+	github.com/timmbarton/layout/components/tracingconn => ./components/tracingconn
+)
+
 require github.com/timmbarton/utils v1.0.3
 
 require (
