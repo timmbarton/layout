@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/gofiber/fiber/v2"
 	"github.com/timmbarton/errors"
 	"github.com/timmbarton/utils/tracing"
 	"go.opentelemetry.io/otel/attribute"
