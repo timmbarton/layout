@@ -2,6 +2,8 @@ package redisconn
 
 import (
 	"fmt"
+
+	"github.com/go-redis/redis/v8"
 )
 
 type Config struct {
