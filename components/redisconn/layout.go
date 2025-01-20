@@ -2,6 +2,8 @@ package redisconn
 
 import (
 	"context"
+
+	"github.com/go-redis/redis/v8"
 )
 
 type Conn struct {
