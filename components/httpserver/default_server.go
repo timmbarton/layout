@@ -5,7 +5,6 @@ import (
 	"errors"
 	"time"
 
-	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/timmbarton/utils/types/secs"
 )

@@ -5,7 +5,6 @@ import (
 	"net"
 	"time"
 
-	"github.com/timmbarton/errors"
 	"github.com/timmbarton/utils/types/secs"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
