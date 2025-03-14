@@ -2,6 +2,7 @@ package grpcserver
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"time"
 
@@ -10,6 +11,7 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/keepalive"
+	"google.golang.org/grpc/reflection"
 )
 
 type DefaultServerConfig struct {
@@ -22,6 +24,8 @@ type DefaultServerConfig struct {
 	Timeout           secs.Seconds `validate:"seconds"`
 	MaxConnectionAge  secs.Seconds `validate:"seconds"`
 	Time              secs.Seconds `validate:"seconds"`
+
+	DisableReflection bool
 }
 
 type DefaultServer struct {
@@ -50,6 +54,10 @@ func (s *DefaultServer) Init(cfg DefaultServerConfig) {
 
 func (s *DefaultServer) RegisterService(sd *grpc.ServiceDesc, ss any) {
 	s.grpcServer.RegisterService(sd, ss)
+
+	if !s.cfg.DisableReflection {
+		reflection.Register(s.grpcServer)
+	}
 }
 
 func (s *DefaultServer) Start(_ context.Context) error {
@@ -91,4 +99,4 @@ func (s *DefaultServer) Stop(_ context.Context) error {
 		return nil
 	}
 }
-func (s *DefaultServer) GetName() string { return "GRPC Server" }
+func (s *DefaultServer) GetName() string { return fmt.Sprintf("GRPC Server at %s", s.cfg.Host) }
