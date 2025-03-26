@@ -3,6 +3,7 @@ package grpcserver
 import (
 	"context"
 	"fmt"
+	"google.golang.org/grpc/reflection"
 	"net"
 	"time"
 
@@ -11,7 +12,6 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/keepalive"
-	"google.golang.org/grpc/reflection"
 )
 
 type DefaultServerConfig struct {
@@ -54,13 +54,13 @@ func (s *DefaultServer) Init(cfg DefaultServerConfig) {
 
 func (s *DefaultServer) RegisterService(sd *grpc.ServiceDesc, ss any) {
 	s.grpcServer.RegisterService(sd, ss)
-
-	if !s.cfg.DisableReflection {
-		reflection.Register(s.grpcServer)
-	}
 }
 
 func (s *DefaultServer) Start(_ context.Context) error {
+	if !s.cfg.DisableReflection {
+		reflection.Register(s.grpcServer)
+	}
+
 	errCh := make(chan error)
 
 	go func() {
