@@ -51,6 +51,7 @@ func New(cfg Config, opts ...zap.Option) (c *Connector, err error) {
 		[]zap.Option{
 			zap.AddCaller(),
 			zap.AddStacktrace(zapcore.PanicLevel),
+			zap.Fields(zap.String("service.name", c.cfg.ServiceName)),
 		},
 		opts...,
 	)

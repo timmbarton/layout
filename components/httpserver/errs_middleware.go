@@ -11,6 +11,7 @@ import (
 	"github.com/timmbarton/errors"
 	"github.com/timmbarton/utils/tracing"
 	"go.opentelemetry.io/otel/attribute"
+	"go.uber.org/zap"
 )
 
 const TraceIdHeader = "X-Trace-Id"
@@ -126,6 +127,13 @@ func GetErrsMiddleware(
 			c.IP(),
 			c.Path(),
 			respJSON,
+		)
+
+		zap.L().Error(
+			fmt.Sprintf("%s | %d | %v", c.Path(), resp.Error.Code, err),
+			zap.String("ip", c.IP()),
+			zap.String("path", c.Path()),
+			zap.Any("response", resp),
 		)
 
 		return c.Status(int(resp.Error.Code)).JSON(resp)
