@@ -3,9 +3,10 @@ package grpcserver
 import (
 	"context"
 	"fmt"
-	"google.golang.org/grpc/reflection"
 	"net"
 	"time"
+
+	"google.golang.org/grpc/reflection"
 
 	"github.com/timmbarton/errors"
 	"github.com/timmbarton/utils/types/secs"
@@ -26,6 +27,7 @@ type DefaultServerConfig struct {
 	Time              secs.Seconds `validate:"seconds"`
 
 	DisableReflection bool
+	LogToConsole      bool
 }
 
 type DefaultServer struct {
@@ -47,7 +49,7 @@ func (s *DefaultServer) Init(cfg DefaultServerConfig) {
 		grpc.StatsHandler(otelgrpc.NewServerHandler()),
 		grpc.ChainUnaryInterceptor(
 			errs.GetGRPCInterceptor(s.cfg.ServiceId),
-			errs.LoggingInterceptor,
+			errs.GetLoggingInterceptor(s.cfg.LogToConsole),
 		),
 	)
 }

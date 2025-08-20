@@ -7,7 +7,7 @@ require (
 	github.com/gofiber/fiber/v2 v2.52.9
 	github.com/jmoiron/sqlx v1.4.0
 	github.com/lib/pq v1.10.9
-	github.com/timmbarton/errors v1.0.3
+	github.com/timmbarton/errors v1.0.4
 	github.com/timmbarton/utils v1.0.6
 	go.opentelemetry.io/contrib/bridges/otelzap v0.12.0
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.62.0
