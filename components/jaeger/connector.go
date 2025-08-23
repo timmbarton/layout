@@ -1,4 +1,4 @@
-package tracingconn
+package jaeger
 
 import (
 	"context"
@@ -61,4 +61,4 @@ func (t *Tracer) Stop(ctx context.Context) error {
 
 	return errors.Join(err1, err2)
 }
-func (t *Tracer) GetName() string { return "Tracing" }
+func (t *Tracer) GetName() string { return "Jaeger Tracing" }
