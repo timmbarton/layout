@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"strings"
 
 	"go.opentelemetry.io/contrib/bridges/otelzap"
 	"go.opentelemetry.io/otel"
@@ -55,7 +54,8 @@ func New(cfg Config, loggerOpts ...zap.Option) (c *Connector, err error) {
 		nil,
 		resource.WithAttributes(
 			semconv.ServiceNameKey.String(c.cfg.ServiceName),
-			attribute.String("environment", strings.ToLower(os.Getenv("ENV"))),
+			semconv.DeploymentEnvironmentKey.String(os.Getenv("ENV")),
+			attribute.String("environment", os.Getenv("ENV")),
 		),
 	)
 	if err != nil {
