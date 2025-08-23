@@ -176,7 +176,7 @@ func (c *Connector) Stop(ctx context.Context) error {
 }
 
 func (c *Connector) GetName() string {
-	return fmt.Sprintf("SigNoz Logging and Tracing (%s)", c.cfg.ServiceName)
+	return fmt.Sprintf("SigNoz Logging and Tracing (%s/%s)", os.Getenv("ENV"), c.cfg.ServiceName)
 }
 
 func (c *Connector) GetLogger() *zap.Logger {
