@@ -8,7 +8,6 @@ import (
 
 	"go.opentelemetry.io/contrib/bridges/otelzap"
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
@@ -55,7 +54,6 @@ func New(cfg Config, loggerOpts ...zap.Option) (c *Connector, err error) {
 		resource.WithAttributes(
 			semconv.ServiceNameKey.String(c.cfg.ServiceName),
 			semconv.DeploymentEnvironmentKey.String(os.Getenv("ENV")),
-			attribute.String("environment", os.Getenv("ENV")),
 		),
 	)
 	if err != nil {
