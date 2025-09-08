@@ -49,6 +49,16 @@ func New(cfg Config, loggerOpts ...zap.Option) (c *Connector, err error) {
 		cfg: cfg,
 	}
 
+	loggerOpts = append(
+		[]zap.Option{
+			zap.AddCaller(),
+			zap.AddCallerSkip(1),
+			zap.AddStacktrace(zapcore.PanicLevel),
+		},
+		loggerOpts...,
+	)
+
+	// create signoz core
 	c.res, err = resource.New(
 		nil,
 		resource.WithAttributes(
@@ -85,19 +95,26 @@ func New(cfg Config, loggerOpts ...zap.Option) (c *Connector, err error) {
 		log.WithResource(c.res),
 	)
 
-	loggerOpts = append(
-		[]zap.Option{
-			zap.AddCaller(),
-			zap.AddStacktrace(zapcore.PanicLevel),
-		},
-		loggerOpts...,
+	signozCore := otelzap.NewCore(
+		"",
+		otelzap.WithLoggerProvider(c.log.provider),
 	)
 
+	// create console core
+	encoderCfg := zap.NewDevelopmentEncoderConfig()
+	encoderCfg.EncodeTime = zapcore.ISO8601TimeEncoder
+	encoder := zapcore.NewConsoleEncoder(encoderCfg)
+	ws := zapcore.AddSync(os.Stdout)
+	level := zap.NewAtomicLevelAt(zapcore.InfoLevel)
+
+	consoleCore := zapcore.NewCore(encoder, ws, level)
+
+	// create global logger
+
+	core := zapcore.NewTee(consoleCore, signozCore)
+
 	c.log.logger = zap.New(
-		otelzap.NewCore(
-			"",
-			otelzap.WithLoggerProvider(c.log.provider),
-		),
+		core,
 		loggerOpts...,
 	)
 
