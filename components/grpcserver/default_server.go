@@ -6,6 +6,7 @@ import (
 	"net"
 	"time"
 
+	"go.uber.org/zap"
 	"google.golang.org/grpc/reflection"
 
 	"github.com/timmbarton/errors"
@@ -27,7 +28,6 @@ type DefaultServerConfig struct {
 	Time              secs.Seconds `validate:"seconds"`
 
 	DisableReflection bool
-	LogToConsole      bool
 }
 
 type DefaultServer struct {
@@ -36,7 +36,11 @@ type DefaultServer struct {
 	listener   net.Listener
 }
 
-func (s *DefaultServer) Init(cfg DefaultServerConfig) {
+type logger interface {
+	Error(ctx context.Context, msg string, fields ...zap.Field)
+}
+
+func (s *DefaultServer) Init(cfg DefaultServerConfig, logger logger) {
 	s.cfg = cfg
 
 	s.grpcServer = grpc.NewServer(
@@ -49,7 +53,7 @@ func (s *DefaultServer) Init(cfg DefaultServerConfig) {
 		grpc.StatsHandler(otelgrpc.NewServerHandler()),
 		grpc.ChainUnaryInterceptor(
 			errs.GetGRPCInterceptor(s.cfg.ServiceId),
-			errs.GetLoggingInterceptor(s.cfg.LogToConsole),
+			errs.GetLoggingInterceptor(logger),
 		),
 	)
 }
