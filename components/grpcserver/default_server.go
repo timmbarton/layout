@@ -6,7 +6,6 @@ import (
 	"net"
 	"time"
 
-	"go.uber.org/zap"
 	"google.golang.org/grpc/reflection"
 
 	"github.com/timmbarton/errors"
@@ -14,6 +13,8 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/keepalive"
+
+	"github.com/timmbarton/layout/log"
 )
 
 type DefaultServerConfig struct {
@@ -28,6 +29,7 @@ type DefaultServerConfig struct {
 	Time              secs.Seconds `validate:"seconds"`
 
 	DisableReflection bool
+	DisableLogging    bool
 }
 
 type DefaultServer struct {
@@ -36,12 +38,16 @@ type DefaultServer struct {
 	listener   net.Listener
 }
 
-type logger interface {
-	Error(ctx context.Context, msg string, fields ...zap.Field)
-}
-
-func (s *DefaultServer) Init(cfg DefaultServerConfig, logger logger) {
+func (s *DefaultServer) Init(cfg DefaultServerConfig) {
 	s.cfg = cfg
+
+	interceptors := []grpc.UnaryServerInterceptor{
+		errs.GetGRPCInterceptor(s.cfg.ServiceId),
+	}
+
+	if !cfg.DisableLogging {
+		interceptors = append(interceptors, errs.GetLoggingInterceptor(log.Named("GRPC Server")))
+	}
 
 	s.grpcServer = grpc.NewServer(
 		grpc.KeepaliveParams(keepalive.ServerParameters{
@@ -51,10 +57,7 @@ func (s *DefaultServer) Init(cfg DefaultServerConfig, logger logger) {
 			Time:              time.Duration(s.cfg.Time),
 		}),
 		grpc.StatsHandler(otelgrpc.NewServerHandler()),
-		grpc.ChainUnaryInterceptor(
-			errs.GetGRPCInterceptor(s.cfg.ServiceId),
-			errs.GetLoggingInterceptor(logger),
-		),
+		grpc.ChainUnaryInterceptor(interceptors...),
 	)
 }
 
