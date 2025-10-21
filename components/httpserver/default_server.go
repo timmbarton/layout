@@ -8,6 +8,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/timmbarton/utils/types/secs"
+	"go.uber.org/zap"
 )
 
 type Config struct {
@@ -18,6 +19,7 @@ type Config struct {
 	ServiceId                   int    `validate:"required,min=10,max=99"`
 	ShowUnknownErrorsInResponse bool
 	FiberConfig                 *fiber.Config
+	Logger                      *zap.Logger
 }
 
 type DefaultServer struct {
@@ -44,7 +46,7 @@ func (s *DefaultServer) Init(cfg Config, bind func(fiber.Router)) {
 			},
 		),
 	)
-	s.fiber.Use(GetErrsMiddleware(cfg.ServiceId, cfg.ShowUnknownErrorsInResponse))
+	s.fiber.Use(GetErrsMiddleware(cfg.ServiceId, cfg.ShowUnknownErrorsInResponse, cfg.Logger))
 
 	bind(s.fiber)
 }
