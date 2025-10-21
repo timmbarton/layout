@@ -1,10 +1,8 @@
 package httpserver
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
 
 	"github.com/gofiber/fiber/v2"
@@ -12,6 +10,8 @@ import (
 	"github.com/timmbarton/utils/tracing"
 	"go.opentelemetry.io/otel/attribute"
 	"go.uber.org/zap"
+
+	"github.com/timmbarton/layout/log"
 )
 
 const TraceIdHeader = "X-Trace-Id"
@@ -21,41 +21,47 @@ type response struct {
 	Error   *errs.Err `json:"error"`
 }
 
-func setErrCode(err *errs.Err, httpStatusCode int) {
+func getErrByHTTPCode(httpStatusCode int, index int, message string) *errs.Err {
+	errCode := errs.ErrCodeUnknown
 	switch httpStatusCode {
 	case http.StatusBadRequest:
-		err.Code = errs.ErrCodeBadRequest
+		errCode = errs.ErrCodeBadRequest
 	case http.StatusUnauthorized:
-		err.Code = errs.ErrCodeUnauthorized
+		errCode = errs.ErrCodeUnauthorized
 	case http.StatusForbidden:
-		err.Code = errs.ErrCodeForbidden
+		errCode = errs.ErrCodeForbidden
 	case http.StatusNotFound:
-		err.Code = errs.ErrCodeNotFound
+		errCode = errs.ErrCodeNotFound
 	case http.StatusMethodNotAllowed:
-		err.Code = errs.ErrCodeNotAllowed
+		errCode = errs.ErrCodeNotAllowed
 	case http.StatusRequestTimeout:
-		err.Code = errs.ErrCodeRequestTimeout
+		errCode = errs.ErrCodeRequestTimeout
 	case http.StatusInternalServerError:
-		err.Code = errs.ErrCodeInternal
+		errCode = errs.ErrCodeInternal
 	case http.StatusNotImplemented:
-		err.Code = errs.ErrCodeNotImplemented
+		errCode = errs.ErrCodeNotImplemented
 	case http.StatusBadGateway:
-		err.Code = errs.ErrCodeBadGateway
+		errCode = errs.ErrCodeBadGateway
 	default:
-		err.Code = errs.ErrCodeUnknown
+		errCode = errs.ErrCodeUnknown
 	}
+
+	return errs.New(errCode, index, message)
 }
 
 func GetErrsMiddleware(
 	serviceId int,
 	showUnknownErrorsInResponse bool,
+	logger *zap.Logger,
 ) fiber.Handler {
+	l := log.NewWrappedLogger(logger)
+
 	return func(c *fiber.Ctx) error {
 		ctx, span := tracing.NewSpan(c.UserContext())
 		defer span.End()
 
 		c.SetUserContext(ctx)
-		span.SetName("errs.GetErrsMiddleware")
+		span.SetName("ErrsMiddleware")
 		c.Set(TraceIdHeader, tracing.GetTraceID(span))
 
 		errInterface := c.Next()
@@ -79,64 +85,42 @@ func GetErrsMiddleware(
 			fiberErr := (*fiber.Error)(nil)
 			isFiberErr := errors.As(errInterface, &fiberErr)
 			if isFiberErr {
-				err = &errs.Err{
-					Code:    0,
-					Index:   0,
-					Message: fiberErr.Message,
-				}
-				setErrCode(err, fiberErr.Code)
+				err = getErrByHTTPCode(fiberErr.Code, serviceId*1_0000, fiberErr.Message)
 			} else {
 				customErr, ok := errs.Parse(errInterface)
 				if ok {
 					err = customErr
 				} else if showUnknownErrorsInResponse {
-					err = &errs.Err{
-						Code:    errs.ErrCodeInternal,
-						Index:   serviceId * 1_0000,
-						Message: fmt.Sprintf("на проде этого сообщения не будет: %s", errInterface.Error()),
-					}
+					err = errs.New(
+						errs.ErrCodeInternal,
+						serviceId*1_0000,
+						fmt.Sprintf("на проде этого сообщения не будет: %s", errInterface.Error()),
+					)
 				} else {
 					err = errs.ErrUnknown
 				}
 			}
-		} else if err.Code >= errs.ErrCodeInternal && !showUnknownErrorsInResponse {
-			err.Index = serviceId * 1_0000
-			err.Message = "Внутренняя ошибка сервера"
-			err.Params = nil
+		} else if err.GetCode() >= int(errs.ErrCodeInternal) && !showUnknownErrorsInResponse {
+			err = errs.New(errs.ErrCodeInternal, serviceId*1_0000, "Внутренняя ошибка сервера")
 		}
 
 		resp.Error = err
-		if resp.Error.Code == 0 {
+		if resp.Error.GetCode() == 0 {
 			resp.Error = errs.ErrUnknown
 		}
 
 		// logging
 
-		respJSON := ""
-
-		respJSONBytes, marshallingErr := json.Marshal(resp)
-		if marshallingErr != nil {
-			respJSON = fmt.Sprintf("%#+v (marshalling err: %s)", resp, marshallingErr.Error())
-		} else {
-			respJSON = string(respJSONBytes)
-		}
-
-		// log error
-		log.Printf(
-			"ip: %s | path: %s | response: %s\n",
-			c.IP(),
-			c.Path(),
-			respJSON,
-		)
-
-		zap.L().Error(
-			fmt.Sprintf("%s | %d | %v", c.Path(), resp.Error.Code, err),
+		l.Error(
+			ctx,
+			fmt.Sprintf("%s | %d | %v", c.Path(), resp.Error.GetCode(), err),
 			zap.String("ip", c.IP()),
 			zap.String("path", c.Path()),
-			zap.Any("response", resp),
+			zap.Error(err),
+			log.Json("response", resp),
 		)
 
-		return c.Status(int(resp.Error.Code)).JSON(resp)
+		return c.Status(resp.Error.GetCode()).JSON(resp)
 	}
 
 }
